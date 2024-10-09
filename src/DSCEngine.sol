@@ -24,7 +24,8 @@
 pragma solidity 0.8.27;
 
 import {DecentralizedStableCoin} from "./DecentralizedStableCoin.sol";
-
+import {ReentrancyGuard} from "../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import {IERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 /*
  * @title DSCEngine
  * @author Faraz 
@@ -45,18 +46,30 @@ import {DecentralizedStableCoin} from "./DecentralizedStableCoin.sol";
  * for minting and redeeming DSC, as well as depositing and withdrawing collateral.
  * @notice This contract is based on the MakerDAO DSS system
  */
-contract DSCEngine {
+
+contract DSCEngine is ReentrancyGuard {
     //------------Errors-------------------------
     error DSCEngine__NeedsMoreThanZero();
     error DSCEngine__TokenAddressAndPriceFeedAddressMustBeSame();
     error DSCEngine__NotAllowedToken();
+    error DSCEngine__TransferFailed();
 
     //------------state variables----------------
 
     mapping(address token => address priceFeed) private s_priceFeeds;
+    mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
+    mapping(address user=> uint256 amountDscMinted) private s_DSCMinted;
+
     DecentralizedStableCoin private immutable i_dsc;
 
-    //------------modifiers----------------------
+
+    //----------------Events--------------------
+
+    event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
+
+
+
+    //---------------modifiers----------------------
 
     modifier moreThanZero(uint256 amount) {
         if (amount == 0) {
@@ -74,11 +87,7 @@ contract DSCEngine {
 
     //------------funtions--------------------
 
-    constructor(
-        address[] memory tokenAddresses,
-        address[] memory priceFeedAddresses,
-        address dscAddress
-    ) {
+    constructor(address[] memory tokenAddresses, address[] memory priceFeedAddresses, address dscAddress) {
         //USD Price Feeds
         if (tokenAddresses.length != priceFeedAddresses.length) {
             revert DSCEngine__TokenAddressAndPriceFeedAddressMustBeSame();
@@ -92,30 +101,56 @@ contract DSCEngine {
         i_dsc = DecentralizedStableCoin(dscAddress);
     }
 
-    //------------External functions-----------
+
+    //--------------External functions-----------
+
 
     function depositCollateralAndMintDSC() external {}
 
+
     // @param tokenCollateralAddress the address of the token to deposit as collateral
     //@param amountCollateral the amount of collateral to be deposit
-    function depositCollateral(
-        address tokenCollateralAddress,
-        uint256 amountCollateral
-    )
+
+
+    function depositCollateral(address tokenCollateralAddress, uint256 amountCollateral)
         external
         moreThanZero(amountCollateral)
         isAllowedToken(tokenCollateralAddress)
-    {}
+        nonReentrant
+    {
+        s_collateralDeposited[msg.sender][tokenCollateralAddress] += amountCollateral;
+        emit CollateralDeposited(msg.sender, tokenCollateralAddress, amountCollateral);
+        bool success = IERC20(tokenCollateralAddress).transferFrom(msg.sender,  address(this), amountCollateral);
+        if(!success){
+            revert DSCEngine__TransferFailed();
+        }
+    }
 
     function redeemCollateralForDSC() external {}
 
     function redeemCollateral() external {}
 
-    function mintDSC() external {}
+
+    //@param amountDscToMint The amount of decentralized stable coin to mint
+    //@note They must have more collateral value than the threshold
+    function mintDSC(uint256 amountDscToMint) external moreThanZero(amountDscToMint) {
+        s_DSCMinted[msg.sender] += amountDscToMint;
+        revertIfHealthFactorisBroken(msg.sender);
+    }
 
     function burnDSC() external {}
 
     function liquidate() external {}
 
     function getHealthFactor() external view {}
+
+
+    //----------Private and Internal Functions-----------
+
+    function revertIfHealthFactorisBroken(address user) internal view{
+        //1. check health factor (do they have enough collateral?)
+        //2. Revert if they don't have enough collateral
+    }
+
+
 }
