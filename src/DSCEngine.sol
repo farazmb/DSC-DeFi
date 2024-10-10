@@ -139,6 +139,7 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     function burnDSC() external {}
+    function burnDC() external {}
 
     function liquidate() external {}
 
@@ -152,5 +153,6 @@ contract DSCEngine is ReentrancyGuard {
         //2. Revert if they don't have enough collateral
     }
 
-
+//this is a new commit and i will be implemented tomorrow
+//or day after tomorrow
 }
