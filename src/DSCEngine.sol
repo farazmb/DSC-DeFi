@@ -140,6 +140,7 @@ contract DSCEngine is ReentrancyGuard {
 
     function burnDSC() external {}
     function burnDC() external {}
+    function  burnD()  external  {}
 
     function liquidate() external {}
 
