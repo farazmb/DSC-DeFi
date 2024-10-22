@@ -135,21 +135,31 @@ contract DSCEngine is ReentrancyGuard {
     //@note They must have more collateral value than the threshold
     function mintDSC(uint256 amountDscToMint) external moreThanZero(amountDscToMint) {
         s_DSCMinted[msg.sender] += amountDscToMint;
-        revertIfHealthFactorisBroken(msg.sender);
+        //if they minted too much ($150DSC, $100ETH)
+        _revertIfHealthFactorisBroken(msg.sender);
     }
 
     function burnDSC() external {}
+
+
     function burnDC() external {}
     function  burnD()  external  {}
 
+    
     function liquidate() external {}
-
     function getHealthFactor() external view {}
 
 
-    //----------Private and Internal Functions-----------
+    //----------Private and Internal Functions---------------
 
-    function revertIfHealthFactorisBroken(address user) internal view{
+    //returns how close to liquiditation a user is
+    //if a user go below 1, then they can get  liquidated
+    
+    function  _healthFactor(address user)   private view returns (uint256) {
+        
+    }
+
+    function _revertIfHealthFactorisBroken(address user) internal view{
         //1. check health factor (do they have enough collateral?)
         //2. Revert if they don't have enough collateral
     }
